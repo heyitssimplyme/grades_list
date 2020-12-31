@@ -1,0 +1,46 @@
+name: Build
+
+on: push
+
+jobs:
+  publish:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        name: [
+          linux,
+          windows,
+          macos
+        ]
+
+        include:
+          - name: linux
+            os: ubuntu-latest
+            artifact_name: target/release/grades-list
+            asset_name: grades-list-linux
+          - name: windows
+            os: windows-latest
+            artifact_name: target/release/grades-list.exe
+            asset_name: grades-list-win
+          - name: macos
+            os: macos-latest
+            artifact_name: target/release/grades-list
+            asset_name: grades-list-mac
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+
+    - name: Build
+      run: cargo build --release --locked
+
+    - name: Upload binaries to release
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.asset_name }}
+        path: ${{ matrix.artifact_name }}
