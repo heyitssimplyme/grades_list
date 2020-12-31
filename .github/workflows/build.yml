@@ -17,15 +17,15 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            artifact_name: target/release/grades-list
+            artifact_name: target/release/grades_list
             asset_name: grades-list-linux
           - name: windows
             os: windows-latest
-            artifact_name: target/release/grades-list.exe
+            artifact_name: target/release/grades_list.exe
             asset_name: grades-list-win
           - name: macos
             os: macos-latest
-            artifact_name: target/release/grades-list
+            artifact_name: target/release/grades_list
             asset_name: grades-list-mac
 
     steps:
