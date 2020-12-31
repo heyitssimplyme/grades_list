@@ -74,7 +74,7 @@ async fn scrape_table (client: &reqwest::Client) -> Result<Vec<CourseData>, Box<
   let table_selector = Selector::parse("table.bodytext").unwrap();
   let tables = document.select(&table_selector).collect::<Vec<_>>();
 
-  if tables.len() == 0 {
+  if tables.is_empty() {
     panic!("Could not find table!")
   }
 
@@ -96,18 +96,18 @@ async fn scrape_table (client: &reqwest::Client) -> Result<Vec<CourseData>, Box<
 }
 
 // calculate both four point and nine point gpa
-fn calculate_gpa (grades: &Vec<CourseData>) -> Result<GPA, Box<dyn std::error::Error>> {
-  let nine: HashMap<String, i32> = [
-    ("A+".to_owned(), 9),
-    ("A".to_owned(), 8),
-    ("B+".to_owned(), 7),
-    ("B".to_owned(), 6),
-    ("C+".to_owned(), 5),
-    ("C".to_owned(), 4),
-    ("D+".to_owned(), 3),
-    ("D".to_owned(), 2),
-    ("E".to_owned(), 1),
-    ("F".to_owned(), 0),
+fn calculate_gpa (grades: &[CourseData]) -> Result<GPA, Box<dyn std::error::Error>> {
+  let nine: HashMap<String, f32> = [
+    ("A+".to_owned(), 9.0),
+    ("A".to_owned(), 8.0),
+    ("B+".to_owned(), 7.0),
+    ("B".to_owned(), 6.0),
+    ("C+".to_owned(), 5.0),
+    ("C".to_owned(), 4.0),
+    ("D+".to_owned(), 3.0),
+    ("D".to_owned(), 2.0),
+    ("E".to_owned(), 1.0),
+    ("F".to_owned(), 0.0),
   ].iter().cloned().collect();
 
   let four: HashMap<String, f32> = [
@@ -129,10 +129,11 @@ fn calculate_gpa (grades: &Vec<CourseData>) -> Result<GPA, Box<dyn std::error::E
   for grade in grades {
     if nine.contains_key(&grade.grade) {
       let course_parts = &grade.course.split_ascii_whitespace().collect::<Vec<_>>();
+      // parse the credit value
       let credit = course_parts[3].parse::<f32>().unwrap();
 
-      nine_point += nine.get(&grade.grade).unwrap().to_owned() as f32 * credit;
-      four_point += four.get(&grade.grade).unwrap().to_owned() as f32 * credit;
+      nine_point += nine.get(&grade.grade).unwrap().to_owned() * credit;
+      four_point += four.get(&grade.grade).unwrap().to_owned() * credit;
 
       total_credits += credit;
     }
@@ -181,7 +182,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("GPA:");
     ptable!(["Four Point", "Nine Point"], [ gpa.four, gpa.nine ]);
 
-    print!("\n");
+    println!();
 
     println!("Grades:");
     let mut pretty = table!(["Session", "Course", "Title", "Grade"]);
