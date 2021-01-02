@@ -98,29 +98,29 @@ async fn scrape_table (client: &reqwest::Client) -> Result<Vec<CourseData>, Box<
 // calculate both four point and nine point gpa
 fn calculate_gpa (grades: &[CourseData]) -> Result<GPA, Box<dyn std::error::Error>> {
   let nine: HashMap<String, f32> = [
-    ("A+".to_owned(), 9.0),
-    ("A".to_owned(), 8.0),
-    ("B+".to_owned(), 7.0),
-    ("B".to_owned(), 6.0),
-    ("C+".to_owned(), 5.0),
-    ("C".to_owned(), 4.0),
-    ("D+".to_owned(), 3.0),
-    ("D".to_owned(), 2.0),
-    ("E".to_owned(), 1.0),
-    ("F".to_owned(), 0.0),
+    ("A+".into(), 9.0),
+    ("A".into(), 8.0),
+    ("B+".into(), 7.0),
+    ("B".into(), 6.0),
+    ("C+".into(), 5.0),
+    ("C".into(), 4.0),
+    ("D+".into(), 3.0),
+    ("D".into(), 2.0),
+    ("E".into(), 1.0),
+    ("F".into(), 0.0),
   ].iter().cloned().collect();
 
   let four: HashMap<String, f32> = [
-    ("A+".to_owned(), 4.0),
-    ("A".to_owned(), 3.8),
-    ("B+".to_owned(), 3.3),
-    ("B".to_owned(), 3.0),
-    ("C+".to_owned(), 2.3),
-    ("C".to_owned(), 2.0),
-    ("D+".to_owned(), 1.3),
-    ("D".to_owned(), 1.0),
-    ("E".to_owned(), 0.7),
-    ("F".to_owned(), 0.0),
+    ("A+".into(), 4.0),
+    ("A".into(), 3.8),
+    ("B+".into(), 3.3),
+    ("B".into(), 3.0),
+    ("C+".into(), 2.3),
+    ("C".into(), 2.0),
+    ("D+".into(), 1.3),
+    ("D".into(), 1.0),
+    ("E".into(), 0.7),
+    ("F".into(), 0.0),
   ].iter().cloned().collect();
 
   let mut total_credits = 0.0;
@@ -165,16 +165,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     panic!("Could not authenticate!");
   }
 
-  let table = scrape_table(&client).await?;
+  let table_content = scrape_table(&client).await?;
 
   logout(&client).await?;
 
-  let gpa = calculate_gpa(&table)?;
+  let gpa = calculate_gpa(&table_content)?;
 
   if args.json {
     let output = Output {
       gpa: &gpa,
-      grades: &table
+      grades: &table_content
     };
 
     println!("{}", serde_json::to_string(&output).unwrap());
@@ -187,7 +187,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Grades:");
     let mut pretty = table!(["Session", "Course", "Title", "Grade"]);
 
-    for row in &table {
+    for row in &table_content {
       pretty.add_row(row![ row.session, row.course, row.title, row.grade ]);
     }
 
