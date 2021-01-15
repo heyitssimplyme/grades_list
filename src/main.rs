@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use structopt::StructOpt;
 
-use scraper::{Html, Selector};
+use scraper::{Html, Selector, element_ref::ElementRef};
 use serde::{Serialize};
 
 use prettytable::{ptable, table, row, cell};
@@ -67,6 +67,14 @@ async fn auth (client: &reqwest::Client, args: &Cli) -> Result<bool, Box<dyn std
   Ok(login_resp_content.contains("You have successfully authenticated"))
 }
 
+fn select_cells(element: ElementRef, selector: &Selector) -> Vec<String> {
+  element.select(selector).map(|e| e.inner_html().trim().to_owned()).collect()
+}
+
+fn html_entities (s: &str) -> String {
+  s.replace("&nbsp;", "").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+}
+
 async fn scrape_table (client: &reqwest::Client) -> Result<Vec<CourseData>, Box<dyn std::error::Error>> {
   let courses_page = client.get(COURSE_URL).send().await?.text().await?;
 
@@ -78,17 +86,23 @@ async fn scrape_table (client: &reqwest::Client) -> Result<Vec<CourseData>, Box<
     panic!("Could not find table!")
   }
 
-  let table = table_extract::Table::find_first(&tables[0].html()).unwrap();
-
   let mut resp: Vec<CourseData> = Vec::new();
 
-  // they all appear to have &nbsp;
-  for row in &table {
+  let sel_tr = Selector::parse("tr").unwrap();
+  let sel_td = Selector::parse("td").unwrap();
+
+  let rows = tables[0].select(&sel_tr).peekable();
+  let data: Vec<Vec<String>> = rows.map(|tr| select_cells(tr, &sel_td)).collect();
+
+  for row in &data {
+    // skip the headers row
+    if row.is_empty() { continue; }
+
     resp.push(CourseData {
-      session: row.get("Session").unwrap().to_owned().replace("&nbsp;", ""),
-      course: row.get("Course").unwrap().to_owned().replace("&nbsp;", ""),
-      title: row.get("Title").unwrap().to_owned().replace("&nbsp;", ""),
-      grade: row.get("Grade").unwrap().to_owned().replace("&nbsp;", ""),
+      session: html_entities(&row[0]),
+      course: html_entities(&row[1]),
+      title: html_entities(&row[2]),
+      grade: html_entities(&row[3]),
     });
   }
 
@@ -128,12 +142,12 @@ fn calculate_gpa (grades: &[CourseData]) -> Result<GPA, Box<dyn std::error::Erro
   let mut four_point = 0.0;
   for grade in grades {
     if nine.contains_key(&grade.grade) {
-      let course_parts = &grade.course.split_ascii_whitespace().collect::<Vec<_>>();
+      let course_parts = &grade.course.split_ascii_whitespace().map(|p| p.trim()).collect::<Vec<_>>();
       // parse the credit value
       let credit = course_parts[3].parse::<f32>().unwrap();
 
-      nine_point += nine.get(&grade.grade).unwrap().to_owned() * credit;
-      four_point += four.get(&grade.grade).unwrap().to_owned() * credit;
+      nine_point += *nine.get(&grade.grade).unwrap() * credit;
+      four_point += *four.get(&grade.grade).unwrap() * credit;
 
       total_credits += credit;
     }
